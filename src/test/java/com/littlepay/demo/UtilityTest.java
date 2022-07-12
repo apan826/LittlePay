@@ -26,7 +26,7 @@ public class UtilityTest {
     @Test
     public void ChargeofStop3toStop1is73() {
         double completeTripCharge = Utility.ChargeofCompleteTrip("Stop3","Stop1");
-        assertEquals(7.3d, completeTripCharge);
+        assertEquals(7.3d, completeTripCharge, 0.0);
     }
 
     @Test
