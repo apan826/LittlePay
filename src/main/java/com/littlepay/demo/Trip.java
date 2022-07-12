@@ -70,19 +70,4 @@ public class Trip {
         return status;
     }
 
-    @Override
-    public String toString() {
-        return "Trip{" +
-                "started=" + started +
-                ", finished=" + finished +
-                ", duration=" + duration +
-                ", fromStopId='" + fromStopId + '\'' +
-                ", toStopId='" + toStopId + '\'' +
-                ", chargeAmount=" + chargeAmount +
-                ", companyId='" + companyId + '\'' +
-                ", busId='" + busId + '\'' +
-                ", PAN='" + PAN + '\'' +
-                ", status=" + status +
-                '}';
-    }
 }
