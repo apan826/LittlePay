@@ -11,13 +11,13 @@ import java.util.Properties;
 public class TripProcessor {
     private static String PROP_FILE = "config.properties";
     private final Map<String, Tap> recordMap;
-    private final CsvFileReader csvFileReader;
-    private final CsvFileWriter csvFileWriter;
 
-    public TripProcessor(String tapsFile, String tripsFile) throws IOException {
-        this.csvFileReader = new CsvFileReader(tapsFile);
-        this.csvFileWriter = new CsvFileWriter(tripsFile);
-        this.recordMap = new HashMap<>();
+    public TripProcessor() throws IOException {
+        this(new HashMap<>());
+    }
+
+    public TripProcessor(Map<String, Tap> recordMap) throws IOException {
+        this.recordMap = recordMap;
     }
 
     public static void main(String[] args) throws IOException {
@@ -31,39 +31,41 @@ public class TripProcessor {
         String tapsFile = props.getProperty("tapsFile");
         String tripsFile = props.getProperty("tripsFile");
 
-        new TripProcessor(tapsFile, tripsFile).process();
+        new TripProcessor().process(tapsFile, tripsFile);
         System.out.println("Trip file has been successfully created");
     }
 
-    private void process() throws IOException {
+    private void process(String tapsFile, String tripsFile) throws IOException {
+        final CsvFileReader csvFileReader = new CsvFileReader(tapsFile);
+        final CsvFileWriter csvFileWriter = new CsvFileWriter(tripsFile);
         try {
-            while (this.csvFileReader.hasNext()) {
-                Tap tap = this.csvFileReader.next();
+            while (csvFileReader.hasNext()) {
+                Tap tap = csvFileReader.next();
                 buildTrip(tap).ifPresent(trip -> {
                     try {
-                        this.csvFileWriter.writeTripFile(trip);
+                        csvFileWriter.writeTripFile(trip);
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
                 });
             }
         } finally {
-            IOUtils.closeQuietly(this.csvFileReader);
-            //IOUtils.closeQuietly(this.csvFileWriter);
+            IOUtils.closeQuietly(csvFileReader);
         }
         //Write all the Map records left into trips file
-        while (! recordMap.isEmpty()) {
-            for (Tap tap : recordMap.values()) {
-                Trip trip = new Trip(tap.getDateTime(),null,0L, tap.getStopId(), null, Utility.MaxChargeofIncompleteTrip(tap.getStopId()), tap.getCompanyId(), tap.getBusId(), tap.getPAN(), Trip.TripStatus.INCOMPLETE);
-                try {
-                    this.csvFileWriter.writeTripFile(trip);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-                recordMap.remove(tap.getPAN(), tap);
-            }
+        try {
+            this.recordMap.values().stream()
+                    .map(tap -> new Trip(tap.getDateTime(),null,0L, tap.getStopId(), null, Utility.MaxChargeofIncompleteTrip(tap.getStopId()), tap.getCompanyId(), tap.getBusId(), tap.getPAN(), Trip.TripStatus.INCOMPLETE))
+                    .forEach(trip -> {
+                        try {
+                            csvFileWriter.writeTripFile(trip);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+        } finally {
+            IOUtils.closeQuietly(csvFileWriter);
         }
-        IOUtils.closeQuietly(this.csvFileWriter);
     }
 
     public Optional<Trip> buildTrip(Tap tap) {
@@ -87,11 +89,13 @@ public class TripProcessor {
             }
             if (old.getBusId().equals(tap.getBusId())) {
                 if (old.getStopId().equals(tap.getStopId())) {
+                    recordMap.remove(old.getPAN());
                     return Optional.of((new Trip(old.getDateTime(), tap.getDateTime(), 0L,
                             old.getStopId(), old.getStopId(), 0.00,
                             old.getCompanyId(), old.getBusId(), old.getPAN(), Trip.TripStatus.CANCELLED)));
 
                 } else {
+                    recordMap.remove(old.getPAN());
                     return Optional.of((new Trip(old.getDateTime(), tap.getDateTime(), Utility.DurationSec(old.getDateTime(), tap.getDateTime()),
                             old.getStopId(), tap.getStopId(), Utility.ChargeofCompleteTrip(old.getStopId(), tap.getStopId()),
                             old.getCompanyId(), old.getBusId(), old.getPAN(), Trip.TripStatus.COMPLETED)));

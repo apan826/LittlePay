@@ -7,10 +7,7 @@ import java.time.format.DateTimeFormatter;
 public class Utility {
 
     public static Long DurationSec(LocalDateTime startTime, LocalDateTime endTime) {
-        DateTimeFormatter df = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
-        LocalDateTime time1 = LocalDateTime.parse(df.format(startTime));
-        LocalDateTime time2 = LocalDateTime.parse(df.format(endTime));
-        return Duration.between(time1, time2).getSeconds();
+        return Duration.between(startTime, endTime).getSeconds();
     }
 
     public static double MaxChargeofIncompleteTrip(String stop) {

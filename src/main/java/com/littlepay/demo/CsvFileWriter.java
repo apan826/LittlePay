@@ -7,43 +7,40 @@ import java.io.BufferedWriter;
 import java.io.Closeable;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 
 public class CsvFileWriter implements Closeable {
     private static final String[] header = new String[] {"Started","Finished","DurationSecs","FromStopId","ToStopId","ChargeAmount","CompanyId","BusID","PAN","Status"};
-    private FileWriter tripsFile;
-    private BufferedWriter tripsWriter;
-    private CSVPrinter csvPrinter;
+    private final BufferedWriter tripsWriter;
+    private final CSVPrinter csvPrinter;
+    DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
 
     public CsvFileWriter(String fileName) throws IOException {
-        this.tripsFile = new FileWriter(fileName);
-        this.tripsWriter = new BufferedWriter(tripsFile);
+        this.tripsWriter = new BufferedWriter(new FileWriter(fileName));
         this.csvPrinter = new CSVPrinter(tripsWriter, CSVFormat.DEFAULT.withHeader(header));
     }
 
     public void writeTripFile(Trip tripsRecord) throws IOException {
-        try{
-            csvPrinter.printRecord(
-                    tripsRecord.getStarted(),
-                    tripsRecord.getFinished(),
-                    tripsRecord.getDuration() + "s",
-                    tripsRecord.getFromStopId(),
-                    tripsRecord.getToStopId(),
-                    "$" + tripsRecord.getChargeAmount(),
-                    tripsRecord.getCompanyId(),
-                    tripsRecord.getBusId(),
-                    tripsRecord.getPAN(),
-                    tripsRecord.getStatus()
-            );
-            csvPrinter.flush();
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-            System.out.println("Errors in writing trips file, please check the data");
-        }
+        csvPrinter.printRecord(
+                Optional.ofNullable(tripsRecord.getStarted()).map(s -> dtf.format(s)).orElse("NA"),
+                Optional.ofNullable(tripsRecord.getFinished()).map(s -> dtf.format(s)).orElse("NA"),
+                tripsRecord.getDuration() + "s",
+                Optional.ofNullable(tripsRecord.getFromStopId()).orElse("NA"),
+                Optional.ofNullable(tripsRecord.getToStopId()).orElse("NA"),
+                "$" + tripsRecord.getChargeAmount(),
+                tripsRecord.getCompanyId(),
+                tripsRecord.getBusId(),
+                tripsRecord.getPAN(),
+                tripsRecord.getStatus()
+        );
     }
 
     @Override
     public void close() throws IOException {
+        this.csvPrinter.flush();
+        IOUtils.closeQuietly(this.csvPrinter);
         IOUtils.closeQuietly(this.tripsWriter);
     }
 }

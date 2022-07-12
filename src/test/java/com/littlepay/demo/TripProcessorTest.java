@@ -9,84 +9,54 @@ import static org.junit.Assert.*;
 
 public class TripProcessorTest {
 
-    private final Map<String, Tap> recordMap;
-    //private DateTimeFormatter df;
-
-    public TripProcessorTest() {
-        this.recordMap = new HashMap<>();
-
+    @Test
+    public void returnEmptyTrip() throws Exception {
+        final TripProcessor processor = new TripProcessor();
+        Tap tap = new Tap("1", LocalDateTime.parse("2018-01-22T13:00:00"),  Tap.TapType.ON, "Stop1", "Company1", "Bus37", "5500005555555559");
+        final Optional<Trip> trip = processor.buildTrip(tap);
+        assertFalse(trip.isPresent());
     }
 
     @Test
-    public void returnEmptyTrip() {
-        Tap tap = new Tap("1", LocalDateTime.parse("2018-01-22 13:00:00"),  Tap.TapType.ON, "Stop1", "Conpany1", "Bus37", "5500005555555559");
-        assertEquals(Optional.empty(), buildTrip(tap));
+    public void testCompletedTrip() throws Exception {
+        Map<String, Tap> recordMap = new HashMap<>();
+        Tap tap1 = new Tap("1", LocalDateTime.parse("2018-01-22T13:00:00"), Tap.TapType.ON, "Stop1", "Company1", "Bus37", "5500005555555559");
+        recordMap.put("5500005555555559", tap1);
+        final TripProcessor processor = new TripProcessor(recordMap);
+
+        Tap tap2 = new Tap("2", LocalDateTime.parse("2018-01-22T13:06:00"), Tap.TapType.OFF, "Stop3", "Company1", "Bus37", "5500005555555559");
+        Optional<Trip> optional = processor.buildTrip(tap2);
+        assertTrue(optional.isPresent());
+        Trip trip = optional.get();
+        assertEquals(Trip.TripStatus.COMPLETED, trip.getStatus());
+        assertEquals(360L, trip.getDuration().longValue());
     }
 
     @Test
-    public void testCompletedTrip() {
+    public void testIncompletedTrip() throws Exception {
+        Map<String, Tap> recordMap = new HashMap<>();
+        Tap tap1 = new Tap("1", LocalDateTime.parse("2018-01-22T13:00:00"), Tap.TapType.OFF, "Stop1", "Company1", "Bus37", "5500005555555559");
+        //recordMap.put("5500005555555559", tap1);
+        final TripProcessor processor = new TripProcessor(recordMap);
 
-        Tap tap = new Tap("1", LocalDateTime.parse("2018-01-22T13:00:00"), Tap.TapType.ON, "Stop1", "Conpany1", "Bus37", "5500005555555559");
-        this.recordMap.put("5500005555555559", tap);
-
-        Tap tap1 = new Tap("2", LocalDateTime.parse("2018-01-22T13:06:00"), Tap.TapType.OFF, "Stop3", "Conpany1", "Bus37", "5500005555555559");
-        //this.recordMap.put("5500005555555559", tap);
-
-        Optional<Trip> trip = buildTrip(tap1);
-        assertEquals(trip.get().getDuration(), 360L);
-        assertEquals(Trip.TripStatus.COMPLETED, trip.get().getStatus());
+        Optional<Trip> optional = processor.buildTrip(tap1);
+        assertTrue(optional.isPresent());
+        Trip trip = optional.get();
+        assertEquals(Trip.TripStatus.INCOMPLETE, trip.getStatus());
     }
 
     @Test
-    public void testIncompletedTrip() {
-        Tap tap1 = new Tap("2", LocalDateTime.parse("2018-01-22T13:06:00"), Tap.TapType.OFF, "Stop3", "Conpany1", "Bus37", "5500005555555559");
-        Optional<Trip> trip = buildTrip(tap1);
-        assertEquals(Trip.TripStatus.INCOMPLETE, trip.get().getStatus());
-    }
+    public void testCancelledTrip() throws Exception {
+        Map<String, Tap> recordMap = new HashMap<>();
+        Tap tap1 = new Tap("1", LocalDateTime.parse("2018-01-22T13:00:00"), Tap.TapType.ON, "Stop1", "Company1", "Bus37", "5500005555555559");
+        recordMap.put("5500005555555559", tap1);
+        final TripProcessor processor = new TripProcessor(recordMap);
 
-    @Test
-    public void testCancelledTrip() {
-        Tap tap = new Tap("1", LocalDateTime.parse("2018-01-22T13:00:00"), Tap.TapType.ON, "Stop1", "Conpany1", "Bus37", "5500005555555559");
-        this.recordMap.put("5500005555555559", tap);
-
-        Tap tap1 = new Tap("2", LocalDateTime.parse("2018-01-22T13:06:00"), Tap.TapType.OFF, "Stop1", "Conpany1", "Bus37", "5500005555555559");
-        Optional<Trip> trip = buildTrip(tap1);
-        assertEquals(Trip.TripStatus.INCOMPLETE, trip.get().getStatus());
-    }
-
-    public Optional<Trip> buildTrip(Tap tap) {
-
-        final Tap old = recordMap.get(tap.getPAN());
-        //Type = ON
-        if (Tap.TapType.ON.equals(tap.getTapType())) {
-            this.recordMap.put(tap.getPAN(), tap);
-            if (old == null) {
-                return Optional.empty();
-            }
-            System.out.println(old.getPAN());
-            return Optional.of(new Trip(old.getDateTime(), null, 0L,
-                    old.getStopId(), null, Utility.MaxChargeofIncompleteTrip(old.getStopId()),
-                    old.getCompanyId(), old.getBusId(), old.getPAN(), Trip.TripStatus.INCOMPLETE));
-        } else {
-            // Type = OFF
-            if (old == null) {
-                return Optional.of((new Trip(null, tap.getDateTime(), 0L,
-                        null, tap.getStopId(), Utility.MaxChargeofIncompleteTrip(tap.getStopId()),
-                        tap.getCompanyId(), tap.getBusId(), tap.getPAN(), Trip.TripStatus.INCOMPLETE)));
-            }
-            if (old.getBusId().equals(tap.getBusId())) {
-                if (old.getStopId().equals(tap.getStopId())) {
-                    return Optional.of((new Trip(old.getDateTime(), tap.getDateTime(), 0L,
-                            old.getStopId(), old.getStopId(), 0.00,
-                            old.getCompanyId(), old.getBusId(), old.getPAN(), Trip.TripStatus.CANCELLED)));
-
-                } else {
-                    return Optional.of((new Trip(old.getDateTime(), tap.getDateTime(), Utility.DurationSec(old.getDateTime(), tap.getDateTime()),
-                            old.getStopId(), tap.getStopId(), Utility.ChargeofCompleteTrip(old.getStopId(), tap.getStopId()),
-                            old.getCompanyId(), old.getBusId(), old.getPAN(), Trip.TripStatus.COMPLETED)));
-                }
-            }
-        }
-        return Optional.empty();
+        Tap tap2 = new Tap("2", LocalDateTime.parse("2018-01-22T13:06:00"), Tap.TapType.OFF, "Stop1", "Company1", "Bus37", "5500005555555559");
+        Optional<Trip> optional = processor.buildTrip(tap2);
+        assertTrue(optional.isPresent());
+        Trip trip = optional.get();
+        assertEquals(Trip.TripStatus.CANCELLED, trip.getStatus());
+        assertEquals(0L, trip.getDuration().longValue());
     }
 }

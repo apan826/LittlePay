@@ -22,7 +22,6 @@ public class CsvFileReader implements Iterator<Tap>, Closeable {
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
     private final CSVParser csvParser;
     private final Reader reader;
-    private final Iterator<CSVRecord> iterator;
 
     public CsvFileReader(String fileName) throws IOException {
         this.reader = new BufferedReader(new FileReader(fileName));
@@ -32,17 +31,16 @@ public class CsvFileReader implements Iterator<Tap>, Closeable {
                 .withSkipHeaderRecord(true)
                 .withTrim()
                 .withDelimiter(','));
-        this.iterator = this.csvParser.iterator();
     }
 
     @Override
     public boolean hasNext() {
-        return this.iterator.hasNext();
+        return this.csvParser.iterator().hasNext();
     }
 
     @Override
     public Tap next() {
-        final CSVRecord record = this.iterator.next();
+        final CSVRecord record = this.csvParser.iterator().next();
         return new Tap(record.get(COL_ID),
                 LocalDateTime.parse(record.get(COL_DATETIME), this.formatter),
                 Tap.TapType.valueOf(record.get(COL_TAP_TYPE)),
