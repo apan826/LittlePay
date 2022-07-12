@@ -1,9 +1,7 @@
 package com.littlepay.demo;
 
 import org.junit.Test;
-
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -21,26 +19,39 @@ public class TripProcessorTest {
 
     @Test
     public void returnEmptyTrip() {
-       // DateTimeFormatter df = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
         Tap tap = new Tap("1", LocalDateTime.parse("2018-01-22 13:00:00"),  Tap.TapType.ON, "Stop1", "Conpany1", "Bus37", "5500005555555559");
-        //this.recordMap.put("5500005555555559", tap);
-
         assertEquals(Optional.empty(), buildTrip(tap));
     }
 
     @Test
     public void testCompletedTrip() {
 
-       // DateTimeFormatter df = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
-        Tap tap = new Tap("1", LocalDateTime.parse("2018-01-22 13:00:00"), Tap.TapType.ON, "Stop1", "Conpany1", "Bus37", "5500005555555559");
+        Tap tap = new Tap("1", LocalDateTime.parse("2018-01-22T13:00:00"), Tap.TapType.ON, "Stop1", "Conpany1", "Bus37", "5500005555555559");
         this.recordMap.put("5500005555555559", tap);
 
-        Tap tap1 = new Tap("2", LocalDateTime.parse("2018-01-22 13:06:00"), Tap.TapType.OFF, "Stop3", "Conpany1", "Bus37", "5500005555555559");
+        Tap tap1 = new Tap("2", LocalDateTime.parse("2018-01-22T13:06:00"), Tap.TapType.OFF, "Stop3", "Conpany1", "Bus37", "5500005555555559");
         //this.recordMap.put("5500005555555559", tap);
 
         Optional<Trip> trip = buildTrip(tap1);
+        assertEquals(trip.get().getDuration(), 360L);
+        assertEquals(Trip.TripStatus.COMPLETED, trip.get().getStatus());
+    }
 
-        assertEquals(trip.get().getDuration(), "360s");
+    @Test
+    public void testIncompletedTrip() {
+        Tap tap1 = new Tap("2", LocalDateTime.parse("2018-01-22T13:06:00"), Tap.TapType.OFF, "Stop3", "Conpany1", "Bus37", "5500005555555559");
+        Optional<Trip> trip = buildTrip(tap1);
+        assertEquals(Trip.TripStatus.INCOMPLETE, trip.get().getStatus());
+    }
+
+    @Test
+    public void testCancelledTrip() {
+        Tap tap = new Tap("1", LocalDateTime.parse("2018-01-22T13:00:00"), Tap.TapType.ON, "Stop1", "Conpany1", "Bus37", "5500005555555559");
+        this.recordMap.put("5500005555555559", tap);
+
+        Tap tap1 = new Tap("2", LocalDateTime.parse("2018-01-22T13:06:00"), Tap.TapType.OFF, "Stop1", "Conpany1", "Bus37", "5500005555555559");
+        Optional<Trip> trip = buildTrip(tap1);
+        assertEquals(Trip.TripStatus.INCOMPLETE, trip.get().getStatus());
     }
 
     public Optional<Trip> buildTrip(Tap tap) {

@@ -49,7 +49,7 @@ public class TripProcessor {
             }
         } finally {
             IOUtils.closeQuietly(this.csvFileReader);
-            IOUtils.closeQuietly(this.csvFileWriter);
+            //IOUtils.closeQuietly(this.csvFileWriter);
         }
         //Write all the Map records left into trips file
         while (! recordMap.isEmpty()) {
@@ -60,8 +60,10 @@ public class TripProcessor {
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
+                recordMap.remove(tap.getPAN(), tap);
             }
         }
+        IOUtils.closeQuietly(this.csvFileWriter);
     }
 
     public Optional<Trip> buildTrip(Tap tap) {
