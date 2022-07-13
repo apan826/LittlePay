@@ -1,6 +1,6 @@
 Instructions
 
-(1) The config.properties file is to specify the input and output files.
+(1) This is a Maven project and the config.properties file is to specify the input and output files.
 
 (2) Please put a input csv file in your specified directory.
 
